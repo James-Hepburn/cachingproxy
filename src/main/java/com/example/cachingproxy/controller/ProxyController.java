@@ -14,21 +14,21 @@ public class ProxyController {
     @Autowired
     private ProxyService proxyService;
 
-    @Value("${origin.url}")
+    @Value("${origin.url:}")
     private String origin;
 
     @GetMapping("/**")
     public ResponseEntity <String> proxy (HttpServletRequest request) {
         String path = request.getRequestURI ();
         String query = request.getQueryString ();
-        String url = origin + path + (query != null ? "?" + query : "");
+        String url = this.origin + path + (query != null ? "?" + query : "");
 
         ResponseEntity <String> response = this.proxyService.fetchFromOrigin (url);
 
         HttpHeaders headers = new HttpHeaders ();
         headers.putAll (response.getHeaders ());
 
-        if (!headers.containsKey ("X-Cache")) {
+        if (headers.getFirst ("X-Cache") == null || !"MISS".equals (headers.getFirst ("X-Cache"))) {
             headers.set ("X-Cache", "HIT");
         }
 
