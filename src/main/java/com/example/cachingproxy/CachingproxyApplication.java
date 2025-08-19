@@ -1,12 +1,10 @@
 package com.example.cachingproxy;
 
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
-import org.springframework.context.ConfigurableApplicationContext;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @EnableCaching
@@ -14,25 +12,16 @@ import java.util.Map;
 public class CachingproxyApplication {
 
 	public static void main(String[] args) {
-		if (args.length > 0 && "--clear-cache".equals (args [0])) {
-			SpringApplication app = new SpringApplication (CachingproxyApplication.class);
-			app.setWebApplicationType (WebApplicationType.NONE);
-			ConfigurableApplicationContext context = app.run (args);
-			CacheManager cacheManager = context.getBean (CacheManager.class);
-			cacheManager.getCache ("responses").clear ();
-			System.out.println ("Cache cleared");
-			context.close ();
-			return;
-		}
-
-		int port = 3000;
+		Map <String, Object> properties = new HashMap<>();
 		String origin = null;
 
 		for (int i = 0; i < args.length; i++) {
-			if ("--port".equals (args [i]) && i + 1 < args.length) {
-				port = Integer.parseInt (args [i + 1]);
-			} else if ("--origin".equals (args[i]) && i + 1 < args.length) {
-				origin = args [i + 1];
+			if (args [i].startsWith ("--origin=")) {
+				origin = args [i].substring ("--origin=".length ());
+			} else if (args [i].startsWith ("--server.port=")) {
+				properties.put ("server.port", Integer.parseInt (args [i].substring ("--server.port=".length ())));
+			} else if ("--clear-cache".equals (args [i])) {
+				properties.put ("clear-cache", true);
 			}
 		}
 
@@ -41,9 +30,12 @@ public class CachingproxyApplication {
 			return;
 		}
 
-		SpringApplication app = new SpringApplication (CachingproxyApplication.class);
-		app.setDefaultProperties (Map.of ("server.port", port, "origin.url", origin));
-		app.run (args);
-	}
+		properties.put ("origin.url", origin);
 
+		SpringApplication app = new SpringApplication (CachingproxyApplication.class);
+		app.setDefaultProperties (properties);
+		app.run (args);
+
+		System.out.printf ("Caching proxy started on port %s, forwarding to %s%n", properties.get ("server.port"), origin);
+	}
 }
