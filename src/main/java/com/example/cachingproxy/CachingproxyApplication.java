@@ -1,41 +1,71 @@
 package com.example.cachingproxy;
 
-import org.springframework.boot.SpringApplication;
+import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
 import java.util.Map;
 
-@EnableCaching
 @SpringBootApplication
 public class CachingproxyApplication {
+	private static String origin;
+	private static int port;
 
-	public static void main(String[] args) {
-		Map <String, Object> properties = new HashMap<>();
-		String origin = null;
+	public static Map <String, String> parseArguments (String [] args) {
+		Map <String, String> parameters = new HashMap<>();
 
 		for (int i = 0; i < args.length; i++) {
-			if (args [i].startsWith ("--origin=")) {
-				origin = args [i].substring ("--origin=".length ());
-			} else if (args [i].startsWith ("--server.port=")) {
-				properties.put ("server.port", Integer.parseInt (args [i].substring ("--server.port=".length ())));
-			} else if ("--clear-cache".equals (args [i])) {
-				properties.put ("clear-cache", true);
+			if (args [i].startsWith ("--")) {
+				String key = args [i].substring (2);
+
+				if (i + 1 < args.length && !args [i + 1].startsWith ("--")) {
+					parameters.put (key, args [++i]);
+				} else {
+					parameters.put (key, "");
+				}
 			}
 		}
 
-		if (origin == null) {
-			System.err.println ("Origin URL must be provided with --origin");
+		return parameters;
+	}
+
+	public static void main(String[] args) {
+		Map <String, String> parameters = parseArguments (args);
+
+		if (parameters.containsKey ("help")) {
+			System.out.println("How to use:");
+			System.out.println("  caching-proxy --port <number> --origin <url>");
+			System.out.println("  caching-proxy --clear-cache");
 			return;
 		}
 
-		properties.put ("origin.url", origin);
+		if (parameters.containsKey ("port")) {
+			port = Integer.parseInt (parameters.get ("pot"));
+			System.setProperty ("server.port", String.valueOf (port));
+		}
 
-		SpringApplication app = new SpringApplication (CachingproxyApplication.class);
-		app.setDefaultProperties (properties);
-		app.run (args);
+		if (parameters.containsKey ("origin")) {
+			origin = parameters.get ("origin");
+			System.setProperty ("proxy.origin", origin);
+		}
 
-		System.out.printf ("Caching proxy started on port %s, forwarding to %s%n", properties.get ("server.port"), origin);
+		if (parameters.containsKey ("clear-cache")) {
+			try {
+				new RestTemplate ().postForLocation ("http://localhost: " + port + "/clear-cache", null);
+				System.out.println ("Cache cleared");
+			} catch (Exception e) {
+				System.err.println ("Cache not cleared");
+			}
+
+			return;
+		}
+
+		new SpringApplicationBuilder (CachingproxyApplication.class)
+				.web (WebApplicationType.SERVLET)
+				.properties ("server.port=" + port, "proxy.origin=" + origin)
+				.run (args);
 	}
+
 }
