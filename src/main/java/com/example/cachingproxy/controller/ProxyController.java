@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
@@ -40,7 +41,6 @@ public class ProxyController {
 
         if (cacheResponse != null){
             return ResponseEntity.status (cacheResponse.getStatusCode ())
-                    .headers (cacheResponse.getHeaders ())
                     .header ("X-Cache", "HIT")
                     .body (cacheResponse.getBody ());
         }
@@ -49,8 +49,13 @@ public class ProxyController {
         this.cache.put (url, response);
 
         return ResponseEntity.status (response.getStatusCode ())
-                .headers (response.getHeaders ())
                 .header ("X-Cache", "MISS")
                 .body (response.getBody ());
+    }
+
+    @PostMapping("/clear-cache")
+    public String clearCache (){
+        this.cache.invalidateAll ();
+        return "Cache cleared";
     }
 }

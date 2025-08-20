@@ -42,7 +42,7 @@ public class CachingproxyApplication {
 		}
 
 		if (parameters.containsKey ("port")) {
-			port = Integer.parseInt (parameters.get ("pot"));
+			port = Integer.parseInt (parameters.get ("port"));
 			System.setProperty ("server.port", String.valueOf (port));
 		}
 
@@ -56,7 +56,7 @@ public class CachingproxyApplication {
 				new RestTemplate ().postForLocation ("http://localhost: " + port + "/clear-cache", null);
 				System.out.println ("Cache cleared");
 			} catch (Exception e) {
-				System.err.println ("Cache not cleared");
+				System.err.println ("Cache not cleared: " + e.getMessage ());
 			}
 
 			return;
